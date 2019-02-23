@@ -639,6 +639,7 @@ class Slab(s_base.Base):
         if not self.dirty:
             return False
 
+        logger.info(f'Committing for {self.path}')
         # ok... lets commit and re-open
         self._finiCoXact()
         self._initCoXact()
@@ -728,7 +729,7 @@ class Scan:
                 yield self.atitem
 
                 if self.bumped:
-
+                    logger.info('Restarting bumped scan')
                     if self.slab.isfini:
                         raise s_exc.IsFini()
 
@@ -744,6 +745,7 @@ class Scan:
 
                     if self.curs.item() == self.atitem:
                         next(self.genr)
+                    logger.info('Done restarting scan')
 
                 self.atitem = next(self.genr)
 
