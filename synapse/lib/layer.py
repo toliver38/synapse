@@ -40,8 +40,10 @@ class LayerApi(s_cell.CellApi):
 
     async def getLiftRows(self, lops):
         self.allowed(self.liftperm)
-        async for item in self.layr.getLiftRows(lops):
+        logger.info(f'Executing remote lops:      {lops}')
+        async for item in self.layr.getLiftRows(lops, debug=False):
             yield item
+        logger.info(f'Done executing remote lops: {lops}')
 
     async def iterFormRows(self, form):
         self.allowed(self.liftperm)
@@ -168,11 +170,14 @@ class Layer(s_base.Base):
 
             yield wind
 
-    async def getLiftRows(self, lops):
+    async def getLiftRows(self, lops, debug=True):
         '''
         Returns:
             Iterable[Tuple[bytes, Dict[str, Any]]]:  yield a stream of tuple (buid, propdict)
         '''
+        if debug:
+            logger.info(f'Executing lops: {lops}')
+
         for oper in lops:
 
             func = self._lift_funcs.get(oper[0])
@@ -184,15 +189,20 @@ class Layer(s_base.Base):
                 props = await self.getBuidProps(buid)
                 yield (buid, props)
 
+        if debug:
+            logger.info(f'Done executing lops: {lops}')
+
     async def stor(self, sops, splices=None):
         '''
         Execute a series of storage operations.
         '''
+        logger.info(f'Executing sops: {sops}')
         for oper in sops:
             func = self._stor_funcs.get(oper[0])
             if func is None:  # pragma: no cover
                 raise s_exc.NoSuchStor(name=oper[0])
             await func(oper)
+        logger.info(f'Done executing sops: {sops}')
 
         if splices:
 

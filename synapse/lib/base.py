@@ -1,4 +1,5 @@
 import gc
+import time
 import atexit
 import signal
 import asyncio
@@ -9,8 +10,7 @@ import weakref
 import contextlib
 import collections
 
-if __debug__:
-    import traceback
+import traceback
 
 import synapse.exc as s_exc
 import synapse.glob as s_glob
@@ -21,10 +21,32 @@ logger = logging.getLogger(__name__)
 
 def _fini_atexit(): # pragma: no cover
 
-    for item in gc.get_objects():
+    bases = [item for item in gc.get_objects() if isinstance(item, Base)]
 
-        if not isinstance(item, Base):
+    # pass through and call fini and make tasks
+    # for fini'ing those with atexit first
+    for item in bases:
+        if not item.anitted:
             continue
+        if item.isfini:
+            continue
+        if not item._fini_atexit:
+            continue
+        try:
+            print(f'At exit: Calling fini for {item}')
+            rv = item.fini()
+            if s_coro.iscoro(rv):
+                # Try to run the fini on its loop
+                loop = item.loop
+                if not loop.is_running():
+                    continue
+                task = loop.create_task(rv)
+
+        except Exception:
+            logger.exception('atexit fini fail: %r' % (item,))
+
+    time.sleep(0.05)
+    for item in bases:
 
         if not item.anitted:
             continue
@@ -32,26 +54,10 @@ def _fini_atexit(): # pragma: no cover
         if item.isfini:
             continue
 
-        if not item._fini_atexit:
-            if __debug__:
-                print(f'At exit: Missing fini for {item}')
-                for depth, call in enumerate(item.call_stack[:-2]):
-                    print(f'{depth+1:3}: {call.strip()}')
-            continue
-
-        try:
-            if __debug__:
-                logger.debug('At exit: Calling fini for %r', item)
-            rv = item.fini()
-            if s_coro.iscoro(rv):
-                # Try to run the fini on its loop
-                loop = item.loop
-                if not loop.is_running():
-                    continue
-                loop.create_task(rv)
-
-        except Exception:
-            logger.exception('atexit fini fail: %r' % (item,))
+        print(f'At exit: Missing fini for {item}')
+        for depth, call in enumerate(item.call_stack[:-2]):
+            print(f'{depth+1:3}: {call.strip()}')
+        continue
 
 atexit.register(_fini_atexit)
 

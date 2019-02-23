@@ -677,6 +677,7 @@ class Cortex(s_cell.Cell):
     async def __anit__(self, dirn, conf=None):
 
         await s_cell.Cell.__anit__(self, dirn, conf=conf)
+        self._fini_atexit = True
 
         # share ourself via the cell dmon as "cortex"
         # for potential default remote use

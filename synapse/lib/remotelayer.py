@@ -90,9 +90,11 @@ class RemoteLayer(s_layer.Layer):
         return await self.proxy.getBuidProps(buid)
 
     async def getLiftRows(self, *args, **kwargs):
+        logger.info(f'Executing lops: {args}/{kwargs}')
         await self._readyPlayerOne()
         async for item in self.proxy.getLiftRows(*args, **kwargs):
             yield item
+        logger.info(f'Executing lops: {args}/{kwargs}')
 
     async def iterFormRows(self, *args, **kwargs):
         await self._readyPlayerOne()

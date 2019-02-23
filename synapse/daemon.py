@@ -105,6 +105,7 @@ class Daemon(s_base.Base):
     async def __anit__(self, certdir=None):
 
         await s_base.Base.__anit__(self)
+        self._fini_atexit = True
 
         self._shareLoopTasks = set()
 
@@ -169,7 +170,7 @@ class Daemon(s_base.Base):
 
         if self.addr is None:
             self.addr = ret
-
+        logging.debug(f'Daemon is listening on {self.addr}')
         return ret
 
     def share(self, name, item):
