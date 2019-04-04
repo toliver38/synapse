@@ -341,6 +341,21 @@ class Proxy(s_base.Base):
         '''
         return self.schedCoroSafePend(self._ctxobj.__aexit__(*args))
 
+    # def __dir__(self):
+    #     anitted = getattr(self, 'anitted', None)
+    #     if anitted is None:
+    #         print('Inspecting base class')
+    #         return dir(object.__dir__(self))
+    #     if 'class' not in self.sharinfo:
+    #         if not anitted:
+    #             return dir(object.__dir__(self))
+    #         if self.isfini:
+    #             return dir(object.__dir__(self))
+    #
+    #
+    #     else:
+    #
+
     async def _onShareFini(self, mesg):
 
         iden = mesg[1].get('share')
@@ -380,6 +395,29 @@ class Proxy(s_base.Base):
         '''
         todo = (methname, args, kwargs)
         return await self.task(todo)
+
+    async def t2reflect(self):
+        mesg = ('t2:reflect', {'sess': self.sess,
+                               })
+
+        link = await self.getPoolLink()
+
+        await link.tx(mesg)
+
+        mesg = await link.rx()
+        if mesg is None:
+            return
+
+        if mesg[0] == 't2:reflect:resp':
+            self.sharinfo = mesg[1].get('sharinfo', {})
+            self.methinfo = self.sharinfo.get('meths', {})
+            await self._putPoolLink(link)
+            return mesg
+
+        if mesg[0] == 't2:reflect:exc':
+            await self._putPoolLink(link)
+            retn = mesg[1].get('retn')
+            return s_common.result(retn)
 
     async def taskv2(self, todo, name=None):
 

@@ -1,3 +1,4 @@
+import copy
 import inspect
 
 import logging
@@ -92,6 +93,59 @@ def getShareInfo(item):
 
         if inspect.isasyncgenfunction(attr):
             meths[name] = {'genr': True}
+
+    try:
+        setattr(item, key, info)
+    except Exception as e:  # pragma: no cover
+        logger.exception(f'Failed to set magic on {item}')
+
+    try:
+        setattr(item.__class__, key, info)
+    except Exception as e:  # pragma: no cover
+        logger.exception(f'Failed to set magic on {item.__class__}')
+
+    return info
+
+def getFullShareInfo(item):
+    '''Get a complete set of reflected information about an item for a telepath proxy'''
+    key = f'_syn_full_sharinfo_{item.__class__.__module__}_{item.__class__.__qualname__}'
+    info = getattr(item, key, None)
+    if info is not None:
+        return info
+
+    info = copy.deepcopy(getShareInfo(item))
+    info['classes'] = getClsNames(item)
+    info['doc'] = getattr(item, '__doc__', 'Item is missing __doc__')
+    meths = info.get('meths')
+
+    for name in dir(item):
+
+        if name.startswith('_'):
+            continue
+
+        attr = getattr(item, name, None)
+        if not callable(attr):
+            continue
+
+        methinfo = meths.get(name)
+        if methinfo is None:
+            methinfo = {}
+            meths[name] = methinfo
+
+        # We know we can cleanly unwrap these functions
+        wrapped = getattr(attr, '__syn_wrapped__', None)
+        if wrapped in unwraps:
+            real = inspect.unwrap(attr)
+            doc = getattr(attr, '__doc__', None)
+            if doc is None:
+                doc = 'Real is missing __doc__'
+            methinfo['doc'] = doc
+            continue
+
+        doc = getattr(attr, '__doc__', None)
+        if doc is None:
+            doc = 'Attr is missing __doc__'
+        methinfo['doc'] = doc
 
     try:
         setattr(item, key, info)

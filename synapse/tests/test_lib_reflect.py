@@ -40,3 +40,13 @@ class ReflectTest(s_t_utils.SynTest):
                 pass
             self.isinstance(getattr(echo, '_syn_sharinfo_synapse.tests.test_lib_reflect_Echo', None), dict)
             self.isinstance(getattr(Echo, '_syn_sharinfo_synapse.tests.test_lib_reflect_Echo', None), dict)
+
+    async def test_full_telemeth(self):
+        async with self.getTestDmon() as dmon:
+            echo = await Echo.anit()
+            dmon.share('echo', echo)
+            async with await self.getTestProxy(dmon, 'echo') as proxy:
+                # attrs = dir(proxy)
+                mesg = await proxy.t2reflect()
+                from pprint import pprint
+                pprint(mesg)

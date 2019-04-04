@@ -127,6 +127,7 @@ class Daemon(s_base.Base):
 
             # task version 2 API
             't2:init': self._onTaskV2Init,
+            't2:reflect': self._onT2Reflect,
         }
 
         self.onfini(self._onDmonFini)
@@ -331,6 +332,35 @@ class Daemon(s_base.Base):
         retn = (True, valu.iden)
         typename = valu.typename
         return ('task:fini', {'task': task, 'retn': retn, 'type': typename})
+
+    async def _onT2Reflect(self, link, mesg):
+        name = mesg[1].get('name')
+        sidn = mesg[1].get('sess')
+
+        try:
+
+            if sidn is None:
+                raise s_exc.NoSuchObj(name=sidn, mesg='Sidn not provided')
+
+            sess = self.sessions.get(sidn)
+            if sess is None:
+                raise s_exc.NoSuchObj(name=sidn, mesg='No such session')
+
+            item = sess.getSessItem(name)
+            if item is None:
+                raise s_exc.NoSuchObj(name=name, mesg='No such item')
+
+            fullsharinfo = s_reflect.getFullShareInfo(item)
+
+            await link.tx(('t2:reflect:resp', {'sharinfo': fullsharinfo}))
+
+        except Exception as e:
+
+            logger.exception('on t2:reflect: %r' % (mesg,))
+
+            if not link.isfini:
+                retn = s_common.retnexc(e)
+                await link.tx(('t2:refelct:exc', {'retn': retn}))
 
     async def _onTaskV2Init(self, link, mesg):
 
