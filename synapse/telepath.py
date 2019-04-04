@@ -410,7 +410,15 @@ class Proxy(s_base.Base):
 
         if mesg[0] == 't2:reflect:resp':
             self.sharinfo = mesg[1].get('sharinfo', {})
-            self.methinfo = self.sharinfo.get('meths', {})
+            methinfo = self.sharinfo.get('meths', {})
+            pdir = dir(Proxy)
+            print(pdir)
+            print('client side: dropping methods which are present on the base Proxy object')
+            for key in list(methinfo.keys()):
+                if key in pdir:
+                    print(f'dropping: {key}')
+                    methinfo.pop(key, None)
+            self.methinfo = methinfo
             await self._putPoolLink(link)
             return mesg
 

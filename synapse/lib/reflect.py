@@ -115,7 +115,10 @@ def getFullShareInfo(item):
 
     info = copy.deepcopy(getShareInfo(item))
     info['classes'] = getClsNames(item)
-    info['doc'] = getattr(item, '__doc__', 'Item is missing __doc__')
+    doc = getattr(item, '__doc__', None)
+    if doc is None:
+        doc = 'Item is missing __doc__'
+    info['doc'] = doc
     meths = info.get('meths')
 
     for name in dir(item):

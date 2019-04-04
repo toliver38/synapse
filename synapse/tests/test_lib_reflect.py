@@ -15,6 +15,7 @@ class Bar:
 
 class Echo(s_base.Base):
     def echo(self, args):
+        """Echo args back to the caller"""
         return args
 
     async def mygenr(self, n):
