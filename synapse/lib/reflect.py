@@ -2,6 +2,7 @@ import copy
 import inspect
 
 import logging
+import synapse.lib.version as s_version
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,10 @@ def getShareInfo(item):
         return info
 
     meths = {}
-    info = {'meths': meths}
+    info = {'meths': meths,
+            'version': s_version.version,
+            'verstring': s_version.verstring,
+            }
 
     for name in dir(item):
 
