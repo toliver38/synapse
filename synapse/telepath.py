@@ -340,21 +340,25 @@ class Proxy(s_base.Base):
             This should never be used by core synapse code.
         '''
         return self.schedCoroSafePend(self._ctxobj.__aexit__(*args))
-
+    #
     # def __dir__(self):
     #     anitted = getattr(self, 'anitted', None)
     #     if anitted is None:
-    #         print('Inspecting base class')
+    #         print('annited is none - Inspecting base class')
     #         return dir(object.__dir__(self))
     #     if 'class' not in self.sharinfo:
     #         if not anitted:
+    #             print('annited is false? Inspecting base class')
     #             return dir(object.__dir__(self))
     #         if self.isfini:
+    #             print('proxy is fini - inspecting base class')
     #             return dir(object.__dir__(self))
     #
-    #
     #     else:
+    #         # mesg = s_glob.sync(self.t2reflect())
+    #         mesg = s_glob.sync(self.t2reflect())  # Can this be called from the loop thread???
     #
+
 
     async def _onShareFini(self, mesg):
 
@@ -408,9 +412,14 @@ class Proxy(s_base.Base):
         if mesg is None:
             return
 
+        await self._putPoolLink(link)
+
         if mesg[0] == 't2:reflect:resp':
             self.sharinfo = mesg[1].get('sharinfo', {})
             methinfo = self.sharinfo.get('meths', {})
+            doc = self.sharinfo.get('doc', '')
+            if doc:
+                setattr(self, '__doc__', doc)
             pdir = dir(Proxy)
             print(pdir)
             print('client side: dropping methods which are present on the base Proxy object')
@@ -419,11 +428,38 @@ class Proxy(s_base.Base):
                     print(f'dropping: {key}')
                     methinfo.pop(key, None)
             self.methinfo = methinfo
-            await self._putPoolLink(link)
+            for name, mnfo in self.methinfo.items():
+                print(name, mnfo)
+                genr = mnfo.get('genr', False)
+                doc = mnfo.get('doc', None)
+                if hasattr(self, name):
+                    print(f'Proxy has {name} already, smashing doc if it exists')
+                    if doc:
+                        attr = getattr(self, name)
+                        setattr(attr, '__doc__', doc)
+                        print('smashed!')
+                        continue
+                print('making attr via __getattr__')
+                attr = getattr(self, name, None)
+                if attr is not None and doc:
+                    print(f'smashing doc for {name}')
+                    setattr(attr, '__doc__', doc)
+                    continue
+                #
+                # print(f'making meth for {name}')
+                # if genr:
+                #     meth = GenrMethod(self, name)
+                # else:
+                #     meth = Method(self, name)
+                #
+                # setattr(self, name, meth)
+                # if doc:
+                #     print('samashing __doc__')
+                #     setattr(meth, '__doc__', doc)
+
             return mesg
 
         if mesg[0] == 't2:reflect:exc':
-            await self._putPoolLink(link)
             retn = mesg[1].get('retn')
             return s_common.result(retn)
 
@@ -593,6 +629,7 @@ class Proxy(s_base.Base):
         return task.reply((True, item))
 
     def __getattr__(self, name):
+        print(f'In __getattr__ {name}')
 
         info = self.methinfo.get(name)
         if info is not None and info.get('genr'):
