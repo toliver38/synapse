@@ -65,8 +65,12 @@ class LayerApi(s_cell.CellApi):
         return await self.layr.stor(sops, splices=splices)
 
     async def getBuidProps(self, buid):
+        logger.info(f'Executing remote gbps:      {buid}')
         self.allowed(self.liftperm)
-        return await self.layr.getBuidProps(buid)
+        ret = await self.layr.getBuidProps(buid)
+        logger.info(f'bps: {ret}')
+        logger.info(f'Done executing remote gbps: {buid}')
+        return ret
 
     async def getModelVers(self):
         return await self.layr.getModelVers()

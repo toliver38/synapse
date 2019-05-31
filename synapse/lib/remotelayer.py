@@ -87,14 +87,17 @@ class RemoteLayer(s_layer.Layer):
 
     async def getBuidProps(self, buid):
         await self._readyPlayerOne()
-        return await self.proxy.getBuidProps(buid)
+        logger.info(f'Executing gbps: {buid}')
+        ret = await self.proxy.getBuidProps(buid)
+        logger.info(f'Done executing gbps: {buid}')
+        return ret
 
     async def getLiftRows(self, *args, **kwargs):
         logger.info(f'Executing lops: {args}/{kwargs}')
         await self._readyPlayerOne()
         async for item in self.proxy.getLiftRows(*args, **kwargs):
             yield item
-        logger.info(f'Executing lops: {args}/{kwargs}')
+        logger.info(f'Done executing lops: {args}/{kwargs}')
 
     async def iterFormRows(self, *args, **kwargs):
         await self._readyPlayerOne()
