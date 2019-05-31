@@ -33,6 +33,7 @@ class LayerApi(s_cell.CellApi):
         self.layr = layr
         self.liftperm = ('layer:lift', self.layr.iden)
         self.storperm = ('layer:stor', self.layr.iden)
+        logger.info(f'self.layr: {self} / {self.layr}')
 
     def allowed(self, perm):
         if not self.user.allowed(perm):
