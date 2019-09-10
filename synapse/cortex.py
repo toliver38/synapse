@@ -1830,6 +1830,10 @@ class Cortex(s_cell.Cell):
                 logger.exception('splice error')
                 await snap.warn(f'splice error: {e}')
 
+            # Not all splice operations may yield, so we will
+            # yield before we spin around each time.
+            await asyncio.sleep(0)
+
     async def _onFeedNodeAdd(self, snap, mesg):
 
         ndef = mesg[1].get('ndef')
