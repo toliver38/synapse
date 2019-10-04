@@ -132,26 +132,12 @@ commands:
     description: "OSX Test Steps"
     steps:
       - checkout
-
-      - restore_cache:
-          keys:
-            - v5-osx-venv-{{ .Environment.CIRCLE_STAGE }}-{{ .Branch }}-{{ checksum "setup.py" }}
-
-      - do_venv_setup
-
-      - save_cache:
-          paths:
-            - ./venv
-          key: v5-osx-venv-{{ .Environment.CIRCLE_STAGE }}-{{ .Branch }}-{{ checksum "setup.py" }}
-
-      - do_test_execution
-      - do_report_coverage
-
-      - store_test_results:
-          path: test-reports
-
-      - store_artifacts:
-          path: test-reports
+      - run:
+          name: fs check
+          command: |
+            diskutil info -all
+            mount
+            df -h
 
   deploy_to_pypi:
     description: "Publish packages to pypi"
@@ -276,7 +262,7 @@ commands:
 jobs:
 
   osx37:
-    parallelism: 4
+    parallelism: 1
     macos:
       xcode: "10.2.0"
 
@@ -354,6 +340,7 @@ workflows:
             branches:
               only:
                 - master
+                - circleci_osx_test
 
       - osx37:
           filters:
