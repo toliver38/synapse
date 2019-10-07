@@ -55,8 +55,21 @@ class UnivServerTest(s_t_utils.SynTest):
                 async with await s_telepath.openurl(f'cell://{dirn}') as proxy:
                     self.eq('echoauth', await proxy.getCellType())
 
+            outp.clear()
+            argu = ['--telepath', 'tcp://127.0.0.1:0/',
+                    '--https', 'https://127.0.0.1:0/',
+                    '--name', 'univtest',
+                    ]
+            argu.extend(['synapse.tests.test_lib_cell.EchoAuth', dirn])
+            # Specify a http port + host combo
+            async with await s_s_univ.main(argu, outp=outp) as cell:
+                async with await s_telepath.openurl(f'cell://{dirn}') as proxy:
+                    self.eq('echoauth', await proxy.getCellType())
+            outp.expect('cell API (https): 127.0.0.1:0')
+
             argu = list(argv)
             argu.extend(['synapse.lib.newp.Newp', dirn])
+            # Specify a non-existing Ctor
             with self.raises(s_exc.NoSuchCtor):
                 async with await s_s_univ.main(argu, outp=outp) as core:
                     pass
