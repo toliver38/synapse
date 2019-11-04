@@ -2640,7 +2640,7 @@ class Cortex(s_cell.Cell):
                     for fname, fctor in lib.locls.items():
                         doc = get_doc(fctor, 'No docstring for Stormlib local function.')
                         funcs[fname] = doc
-                    lib_retn[path] = data
+                    lib_retn['.'.join(path)] = data
                 # print(mods)
                 # Best effort introspection... locally bound definition for a Storm Prim
                 # inside of a Storm Lib would not be seen here.
@@ -2680,8 +2680,11 @@ class Cortex(s_cell.Cell):
                         doc = get_doc(fctor, 'No docstring for Storm Type local function.')
                         funcs[fname] = doc
                     typ_retn[tname] = data
-        pprint(typ_retn)
+        # pprint(typ_retn)
         # pprint(lib_retn)
+        import json
+        print(json.dumps(retn, indent=2, sort_keys=True))
+        s_common.jssave(retn, 'test.json')
         return retn
 
     async def addNodes(self, nodedefs, view=None):
