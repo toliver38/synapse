@@ -2628,18 +2628,60 @@ class Cortex(s_cell.Cell):
                     if v is not baselib:
                         libmap[('lib',) + parts] = v
 
-                pprint(libmap)
+                # pprint(libmap)
+                mods = set()
 
                 for path, lib in libmap.items():
+                    mods.add(lib.__class__.__module__)
                     funcs = {}
                     doc = get_doc(lib, 'No docstring for Stormlib.')
                     data = {'doc': doc,
                             'funcs': funcs}
-                    for name, ctor in lib.locls.items():
-                        doc = get_doc(ctor, 'No docstring for Stormlib local function.')
-                        funcs[name] = doc
+                    for fname, fctor in lib.locls.items():
+                        doc = get_doc(fctor, 'No docstring for Stormlib local function.')
+                        funcs[fname] = doc
                     lib_retn[path] = data
-        pprint(lib_retn)
+                # print(mods)
+                # Best effort introspection... locally bound definition for a Storm Prim
+                # inside of a Storm Lib would not be seen here.
+                import inspect
+                import importlib
+                ctors = []
+                for modname in mods:
+                    try:
+                        mod = importlib.import_module(modname)
+                    except ImportError:
+                        continue
+                    # print(mod)
+                    for name in dir(mod):
+                        attr = getattr(mod, name)
+                        # print(name, attr)
+                        if not inspect.isclass(attr):
+                            continue
+                        if attr is s_stormtypes.Prim:
+                            continue
+                        if issubclass(attr, s_stormtypes.Prim):
+                            print(name, attr)
+                            ctors.append((name, attr))
+                for tname, ctor in ctors:
+                    try:
+                        obj = ctor(None)
+                    except Exception as e:
+                        # Failure list includes:
+                        # - synapse.lib.stormtypes.Set
+                        # - ???
+                        logger.exception(f'Failed to make dummy Stormtype for {ctor}')
+                        continue
+                    funcs = {}
+                    doc = get_doc(obj, 'No docstring for Storm Type')
+                    data = {'doc': doc,
+                            'funcs': funcs}
+                    for fname, fctor in obj.locls.items():
+                        doc = get_doc(fctor, 'No docstring for Storm Type local function.')
+                        funcs[fname] = doc
+                    typ_retn[tname] = data
+        pprint(typ_retn)
+        # pprint(lib_retn)
         return retn
 
     async def addNodes(self, nodedefs, view=None):
