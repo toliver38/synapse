@@ -1360,7 +1360,11 @@ class CortexBasicTest(s_t_utils.SynTest):
 
             coreinfo = await prox.getCoreInfo()
 
-            for field in ('version', 'modeldef', 'stormcmds'):
+            for field in ('version',
+                          'modeldef',
+                          'stormcmds',
+                          'stormlibs',
+                          ):
                 self.isin(field, coreinfo)
 
     async def test_cortex_model_dict(self):

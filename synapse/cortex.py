@@ -93,11 +93,11 @@ class CoreApi(s_cell.CellApi):
         '''
         return await self.cell.getModelDict()
 
-    def getCoreInfo(self):
+    async def getCoreInfo(self):
         '''
         Return static generic information about the cortex including model definition
         '''
-        return self.cell.getCoreInfo()
+        return await self.cell.getCoreInfo()
 
     async def addTrigger(self, condition, query, info, disabled=False):
         '''
@@ -2575,12 +2575,72 @@ class Cortex(s_cell.Cell):
             async for node in snap.getNodesBy(full, valu, cmpr=cmpr):
                 yield node
 
-    def getCoreInfo(self):
+    async def getCoreInfo(self):
         return {
             'version': synapse.version,
             'modeldef': self.model.getModelDef(),
             'stormcmds': {cmd: {} for cmd in self.stormcmds.keys()},
+            'stormlibs': await self.getStormLibInfo(),
         }
+
+    async def getStormLibInfo(self):
+
+        lib_retn = {}
+        typ_retn = {}
+        retn = {
+            'libs': lib_retn,
+            'typs': typ_retn,
+        }
+
+        from pprint import pprint
+
+        # Name, children, funcs
+        def iterlib(root, rootname=()):
+            name, children, funcs = root
+            if name:
+                rootname = rootname + (name,)
+            if funcs:
+                yield rootname
+            for child in children.values():
+                genr = iterlib(child, rootname)
+                for _name in genr:
+                    yield _name
+
+        def get_doc(obj, defval=''):
+            doc = getattr(obj, '__doc__', )
+            if doc:
+                doc = doc.strip()
+            else:
+                doc = defval
+            return doc
+
+        async with await self.snap() as snap:
+            with snap.getStormRuntime() as runt:
+                # initialize the root lib
+                baselib = runt.getVar('lib')  # type: s_stormtypes.LibBase
+                libmap = {('lib',): baselib}
+                genr = iterlib(self.libroot)
+                for parts in genr:
+                    assert parts
+                    v = baselib
+                    for part in parts:
+                        v = await v.deref(part)  # type: s_stormtypes.LibBase
+                    if v is not baselib:
+                        libmap[('lib',) + parts] = v
+
+                pprint(libmap)
+
+                for path, lib in libmap.items():
+                    funcs = {}
+                    doc = get_doc(lib, 'No docstring for Stormlib.')
+                    data = {'doc': doc,
+                            'funcs': funcs}
+                    for name, ctor in lib.locls.items():
+                        doc = get_doc(ctor, 'No docstring for Stormlib local function.')
+                        funcs[name] = doc
+                    lib_retn[path] = data
+        pprint(lib_retn)
+        return retn
 
     async def addNodes(self, nodedefs, view=None):
         '''

@@ -78,6 +78,16 @@ class Snap(s_base.Base):
 
     @contextlib.contextmanager
     def getStormRuntime(self, opts=None, user=None):
+        '''
+        Get a Storm Runtime.
+
+        Args:
+            opts:
+            user:
+
+        Returns:
+            s_storm.Runtime:
+        '''
         if user is None:
             user = self.user
 

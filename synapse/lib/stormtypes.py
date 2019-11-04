@@ -74,6 +74,14 @@ class Lib(StormType):
         pass
 
     async def deref(self, name):
+        '''
+
+        Args:
+            name:
+
+        Returns:
+            Lib: A Storm Lib instance.
+        '''
         try:
             return await StormType.deref(self, name)
         except s_exc.NoSuchName:
@@ -83,6 +91,7 @@ class Lib(StormType):
 
         slib = self.runt.snap.core.getStormLib(path)
         if slib is None:
+            # TODO - Add a mesg value here.
             raise s_exc.NoSuchName(name=name)
 
         ctor = slib[2].get('ctor', Lib)
