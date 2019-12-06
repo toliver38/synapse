@@ -67,6 +67,21 @@ stormcmds = (
         ''',
     },
     {
+        'name': 'dmon.msgs',
+        'descr': 'Show raw messages from a storm daemon running in the Cortex.',
+        'cmdargs': (
+            ('iden', {'help': 'The daemon identifier'}),
+        ),
+        'storm': '''
+            $lib.print('Storm daemon mesages:')
+            $msgs = $lib.dmon.msgs($cmdopts.iden)
+            for $msg in $msgs {
+                // TODO - formatting ???
+                $lib.print($msg)
+            }
+        '''
+    },
+    {
         'name': 'feed.list',
         'descr': 'List the feed functions available in the Cortex',
         'cmdrargs': (),
@@ -151,6 +166,8 @@ class StormDmon(s_base.Base):
         self.count = 0
         self.status = 'initializing'
 
+        self.mesgs = collections.deque(maxlen=256)
+
         async def fini():
             if self.task is not None:
                 self.task.cancel()
@@ -199,8 +216,12 @@ class StormDmon(s_base.Base):
         opts = self.ddef.get('stormopts')
 
         def dmonPrint(evnt):
+            self.mesgs.append(evnt)
             mesg = evnt[1].get('mesg', '')
             logger.info(f'Dmon - {self.iden} - {mesg}')
+
+        def dmonWarn(evnt):
+            self.mesgs.append(evnt)
 
         while not self.isfini:
 
@@ -209,6 +230,7 @@ class StormDmon(s_base.Base):
                 self.status = 'running'
                 async with await self.core.snap(user=self.user) as snap:
                     snap.on('print', dmonPrint)
+                    snap.on('warn', dmonWarn)
 
                     async for nodepath in snap.storm(text, opts=opts, user=self.user):
                         # all storm tasks yield often to prevent latency
@@ -226,6 +248,10 @@ class StormDmon(s_base.Base):
 
             except Exception as e:
                 logger.exception(f'Dmon error ({self.iden})')
+                enfo = s_common.err(e)
+                enfo[1].pop('esrc', None)
+                enfo[1].pop('ename', None)
+                self.mesgs.append(('err', enfo))
                 self.status = f'error: {e}'
                 await self.waitfini(timeout=1)
 

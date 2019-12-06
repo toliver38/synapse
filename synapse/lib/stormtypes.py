@@ -119,6 +119,7 @@ class LibDmon(Lib):
             'add': self._libDmonAdd,
             'del': self._libDmonDel,
             'list': self._libDmonList,
+            'msgs': self._libDmonMsgs,
         })
 
     async def _libDmonDel(self, iden):
@@ -136,6 +137,12 @@ class LibDmon(Lib):
     async def _libDmonList(self):
         dmons = await self.runt.snap.core.getStormDmons()
         return [d.pack() for d in dmons]
+
+    async def _libDmonMsgs(self, iden):
+        dmon = await self.runt.snap.core.getStormDmon(iden)
+        if dmon is None:
+            return []
+        return [m for m in dmon.mesgs]
 
     async def _libDmonAdd(self, quer, name='noname'):
         '''
