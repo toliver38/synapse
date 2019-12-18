@@ -1077,10 +1077,14 @@ class Query(StormType):
         return self.text
 
     async def _methQueryExec(self):
-        query = await self.runt.getStormQuery(self.text)
+        # Should this be an opt-in behavior?????????????????????????????
+        text = self.runt.getVar(self.text.strip().lstrip('$'), self.text)
+        if text != self.text:
+            logger.info(f'Resolved embedded query via variable [{self.text}].')
+        query = await self.runt.getStormQuery(text)
         subrunt = await self.runt.getScopeRuntime(query)
 
-        logger.info(f'Executing storm query via exec() {{{self.text}}} as [{self.runt.user.name}]')
+        logger.info(f'Executing storm query via exec() {{{text}}} as [{self.runt.user.name}]')
         cancelled = False
         try:
             async for item in query.run(subrunt, genr=s_ast.agen()):
