@@ -726,7 +726,16 @@ class Str(Prim):
         })
 
     async def _methEncode(self, encoding='utf8'):
-        return self.valu.encode(encoding)
+        '''
+        Encoding a text values to bytes.
+
+        Args:
+            encoding (str): Encoding to use. Defaults to utf8.
+        '''
+        try:
+            return self.valu.encode(encoding)
+        except UnicodeEncodeError as e:
+            raise s_exc.StormRuntimeError(mesg=str(e), valu=self.valu) from None
 
     async def _methStrSplit(self, text):
         '''
@@ -765,7 +774,16 @@ class Bytes(Prim):
         })
 
     async def _methDecode(self, encoding='utf8'):
-        return self.valu.decode(encoding)
+        '''
+        Decode a bytes to a string.
+
+        Args:
+            encoding (str): The encoding to use when decoding the bytes.
+        '''
+        try:
+            return self.valu.decode(encoding)
+        except UnicodeDecodeError as e:
+            raise s_exc.StormRuntimeError(mesg=str(e), valu=self.valu) from None
 
     async def _methBunzip(self):
         '''
