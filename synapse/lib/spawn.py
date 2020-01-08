@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+import functools
 import threading
 import contextlib
 import collections
@@ -27,56 +28,88 @@ import synapse.lib.grammar as s_grammar
 
 logger = logging.getLogger(__name__)
 
+async def storm(core, item):
+    '''
+    Storm implementation for SpawnCore use.
+    '''
+    useriden = item.get('user')
+    viewiden = item.get('view')
+
+    storminfo = item.get('storm')
+
+    opts = storminfo.get('opts')
+    text = storminfo.get('query')
+
+    user = core.auth.user(useriden)
+    if user is None:
+        raise s_exc.NoSuchUser(iden=useriden)
+
+    view = core.views.get(viewiden)
+    if view is None:
+        raise s_exc.NoSuchView(iden=viewiden)
+
+    async for mesg in view.streamstorm(text, opts=opts, user=user):
+        yield mesg
+
+async def _innerloop(core, todo, done):
+    '''
+    Inner loop for the multiprocessing target code.
+
+    Args:
+        spawninfo (dict): Spawninfo dictionary.
+        todo (multiprocessing.Queue): RX Queue
+        done (multiprocessing.Queue): TX Queue
+
+    Returns:
+        None: Returns None.
+    '''
+    item = await s_coro.executor(todo.get)
+    if item is None:
+        return
+
+    link = await s_link.fromspawn(item.get('link'))
+
+    await s_daemon.t2call(link, storm, (core, item,), {})
+
+    wasfini = link.isfini
+
+    await link.fini()
+
+    await s_coro.executor(done.put, wasfini)
+
+    return True
+
+async def _workloop(spawninfo, todo, done):
+    '''
+    Workloop executed by the multiprocessing target.
+
+    Args:
+        spawninfo (dict): Spawninfo dictionary.
+        todo (multiprocessing.Queue): RX Queue
+        done (multiprocessing.Queue): TX Queue
+
+    Returns:
+        None: Returns None.
+    '''
+    s_glob.iAmLoop()
+
+    async with await SpawnCore.anit(spawninfo) as core:
+
+        while not core.isfini:
+
+            if not await _innerloop(core, todo, done):
+                break
+
 def corework(spawninfo, todo, done):
+    '''
+    Multiprocessing target for hosting a SpawnCore launched by a SpawnProc.
+    '''
 
     # This logging call is okay to run since we're executing in
     # our own process space and no logging has been configured.
     s_common.setlogging(logger, spawninfo.get('loglevel'))
 
-    async def workloop():
-
-        s_glob.iAmLoop()
-
-        async with await SpawnCore.anit(spawninfo) as core:
-
-            async def storm(item):
-
-                useriden = item.get('user')
-                viewiden = item.get('view')
-
-                storminfo = item.get('storm')
-
-                opts = storminfo.get('opts')
-                text = storminfo.get('query')
-
-                user = core.auth.user(useriden)
-                if user is None:
-                    raise s_exc.NoSuchUser(iden=useriden)
-
-                view = core.views.get(viewiden)
-                if view is None:
-                    raise s_exc.NoSuchView(iden=viewiden)
-
-                async for mesg in view.streamstorm(text, opts=opts, user=user):
-                    yield mesg
-
-            while not core.isfini:
-
-                item = await s_coro.executor(todo.get)
-                if item is None:
-                    return
-
-                link = await s_link.fromspawn(item.get('link'))
-
-                await s_daemon.t2call(link, storm, (item,), {})
-
-                wasfini = link.isfini
-
-                await link.fini()
-
-                await s_coro.executor(done.put, wasfini)
-
-    asyncio.run(workloop())
+    asyncio.run(_workloop(spawninfo, todo, done))
 
 class SpawnProc(s_base.Base):
     '''
@@ -279,11 +312,10 @@ class SpawnCore(s_base.Base):
 
         for name, cdef in spawninfo['storm']['cmds']['cdefs']:
 
-            def ctor(argv):
-                return s_storm.PureCmd(cdef, argv)
-
+            ctor = functools.partial(s_storm.PureCmd, cdef)
             self.stormcmds[name] = ctor
 
+        self.libroot = spawninfo.get('storm').get('libs')
         self.boss = await s_boss.Boss.anit()
         self.onfini(self.boss.fini)
 
@@ -330,7 +362,27 @@ class SpawnCore(s_base.Base):
             self.views[iden] = view
 
         # initialize pass-through methods from the telepath proxy
+        # Lift
         self.runRuntLift = self.prox.runRuntLift
+        # StormType Queue APIs
+        self.addCoreQueue = self.prox.addCoreQueue
+        self.hasCoreQueue = self.prox.hasCoreQueue
+        self.delCoreQueue = self.prox.delCoreQueue
+        self.getCoreQueue = self.prox.getCoreQueue
+        self.getCoreQueues = self.prox.getCoreQueues
+        self.getsCoreQueue = self.prox.getsCoreQueue
+        self.putCoreQueue = self.prox.putCoreQueue
+        self.putsCoreQueue = self.prox.putsCoreQueue
+        self.cullCoreQueue = self.prox.cullCoreQueue
+        # Feedfunc support
+        self.getFeedFuncs = self.prox.getFeedFuncs
+        # storm pkgfuncs
+        self.addStormPkg = self.prox.addStormPkg
+        self.delStormPkg = self.prox.delStormPkg
+        self.getStormPkgs = self.prox.getStormPkgs
+
+        # TODO: Add Dmon management functions ($lib.dmon support)
+        # TODO: Add Axon management functions ($lib.bytes support)
 
     def getStormQuery(self, text):
         '''
@@ -353,3 +405,12 @@ class SpawnCore(s_base.Base):
 
     async def getStormMods(self):
         return self.stormmods
+
+    def getStormLib(self, path):
+        root = self.libroot
+        for name in path:
+            step = root[1].get(name)
+            if step is None:
+                return None
+            root = step
+        return root

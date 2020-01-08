@@ -538,9 +538,12 @@ class CoreApi(s_cell.CellApi):
                 }
             }
 
+            tnfo = {'query': text}
+            if opts:
+                tnfo['opts'] = opts
             await self.cell.boss.promote('storm:spawn',
                                          user=self.user,
-                                         info={'query': text})
+                                         info=tnfo)
             proc = None
             mesg = 'Spawn complete'
             try:
@@ -782,8 +785,8 @@ class CoreApi(s_cell.CellApi):
         return await self.cell.getCoreQueues()
 
     @s_cell.adminapi
-    async def coreQueueGets(self, name, offs=0, wait=True, cull=True, size=None):
-        async for item in self.cell.coreQueueGets(name, offs=offs, wait=wait, cull=cull, size=size):
+    async def getsCoreQueue(self, name, offs=0, wait=True, cull=True, size=None):
+        async for item in self.cell.getsCoreQueue(name, offs=offs, wait=wait, cull=cull, size=size):
             yield item
 
     @s_cell.adminapi
@@ -992,14 +995,14 @@ class Cortex(s_cell.Cell):
 
         self.spawnpool = await s_spawn.SpawnPool.anit(self)
         self.onfini(self.spawnpool)
+        self.on('user:mod', self._onEvtBumpSpawnPool)
+
+    async def _onEvtBumpSpawnPool(self, evnt):
+        await self.bumpSpawnPool()
 
     async def bumpSpawnPool(self):
         if self.spawnpool is not None:
             await self.spawnpool.bump()
-
-    async def killSpawnPool(self):
-        if self.spawnpool is not None:
-            await self.spawnpool.kill()
 
     async def getSpawnInfo(self):
         return {
@@ -1018,6 +1021,7 @@ class Cortex(s_cell.Cell):
                     'cdefs': list(self.storm_cmd_cdefs.items()),
                     'ctors': list(self.storm_cmd_ctors.items()),
                 },
+                'libs': tuple(self.libroot),
                 'mods': await self.getStormMods()
             },
             'model': await self.getModelDefs(),
@@ -2981,7 +2985,11 @@ class Cortex(s_cell.Cell):
 
         view = self._viewFromOpts(opts)
 
-        await self.boss.promote('storm', user=user, info={'query': text})
+        info = {'query': text}
+        if opts is not None:
+            info['opts'] = opts
+
+        await self.boss.promote('storm', user=user, info=info)
         async with await self.snap(user=user, view=view) as snap:
             async for pode in snap.iterStormPodes(text, opts=opts, user=user):
                 yield pode
