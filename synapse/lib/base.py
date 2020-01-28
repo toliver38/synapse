@@ -119,6 +119,7 @@ class Base:
         self.isfini = False
         self.anitted = True  # For assertion purposes
         self.finievt = None
+        self.doneevt = None  # Used to indicate that fini has sucessfully run.
         self.entered = False
         self.exitinfo = None
 
@@ -385,6 +386,9 @@ class Base:
 
         fevt = self.finievt
 
+        if fevt is not None:
+            fevt.set()
+
         for base in list(self.tofini):
             await base.fini()
 
@@ -404,8 +408,9 @@ class Base:
         self._syn_funcs.clear()
         self._fini_funcs.clear()
 
-        if fevt is not None:
-            fevt.set()
+        devt = self.doneevt
+        if devt is not None:
+            devt.set()
 
         return 0
 
@@ -447,6 +452,27 @@ class Base:
             self.finievt = asyncio.Event()
 
         return await s_coro.event_wait(self.finievt, timeout)
+
+    async def waitdone(self, timeout=None):
+        '''
+        Wait for the base to fini() and have fini() be completed.
+
+        Returns:
+            None if timed out, True if fini completed.
+
+        Example:
+
+            base.waitdone(timeout=30)
+
+        '''
+
+        if self.isfini:
+            return True
+
+        if self.doneevt is None:
+            self.doneevt = asyncio.Event()
+
+        return await s_coro.event_wait(self.doneevt, timeout)
 
     def schedCoro(self, coro):
         '''
@@ -561,7 +587,7 @@ class Base:
         NOTE: This API may only be used when the ioloop is *also* the main thread.
         '''
         await self.addSignalHandlers()
-        return await self.waitfini()
+        return await self.waitdone()
 
     def waiter(self, count, *names):
         '''
