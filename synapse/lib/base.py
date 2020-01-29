@@ -355,6 +355,8 @@ class Base:
 
         for task in self._active_tasks.copy():
 
+            logger.info(f'[{self}] Killing active task: {task}')
+
             task.cancel()
             try:
                 await task
@@ -383,6 +385,7 @@ class Base:
             return self._syn_refs
 
         self.isfini = True
+        logger.info(f'[{self}] In fini')
 
         fevt = self.finievt
 
@@ -390,6 +393,7 @@ class Base:
             fevt.set()
 
         for base in list(self.tofini):
+            logger.info(f'[{self}] from self.tofini -> [{base}]')
             await base.fini()
 
         try:
@@ -398,6 +402,7 @@ class Base:
             logger.exception(f'{self} - Exception during _kill_active_tasks')
 
         for fini in self._fini_funcs:
+            logger.info(f'[{self}] from self._fini_funcs -> [{fini}]')
             try:
                 await s_coro.ornot(fini)
             except asyncio.CancelledError:
@@ -411,6 +416,8 @@ class Base:
         devt = self.doneevt
         if devt is not None:
             devt.set()
+
+        logger.info(f'[{self}] done fini')
 
         return 0
 
