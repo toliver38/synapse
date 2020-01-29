@@ -170,7 +170,7 @@ class SlabAbrv:
 
         item = self.slab.last(db=self.abrv2name)
         if item is not None:
-            self.offs = s_common.int64un(item[0])
+            self.offs = s_common.int64un(item[0]) + 1
 
     @s_cache.memoize(10000)
     def abrvToName(self, abrv):
@@ -692,7 +692,7 @@ class Slab(s_base.Base):
             # too-long length)
             filesize = os.fstat(fileno).st_size
             goal_end = memstart + min(memlen, filesize)
-            self.lock_goal = goal_end
+            self.lock_goal = goal_end - memstart
 
             self.lock_progress = 0
             prev_memend = memstart
