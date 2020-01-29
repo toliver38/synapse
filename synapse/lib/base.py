@@ -401,8 +401,9 @@ class Base:
         except Exception:
             logger.exception(f'{self} - Exception during _kill_active_tasks')
 
-        for fini in self._fini_funcs:
-            logger.info(f'[{self}] from self._fini_funcs -> [{fini}]')
+        lfnc = len(self._fini_funcs)
+        for i, fini in enumerate(self._fini_funcs, 1):
+            logger.info(f'[{self}] from self._fini_funcs -> [{fini}][{i}/{lfnc}]')
             try:
                 await s_coro.ornot(fini)
             except asyncio.CancelledError:
