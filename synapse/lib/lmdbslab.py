@@ -474,8 +474,11 @@ class Slab(s_base.Base):
 
         if self.lockmemory:
             async def memlockfini():
+                logger.warning(f'Setting memlock resize event for {self}')
                 self.resizeevent.set()
+                logger.warning(f'Awaiting memlock task for {self}')
                 await self.memlocktask
+                logger.warning(f'Memlock task is finished :) for {self}')
             self.memlocktask = s_coro.executor(self._memorylockloop)
             self.onfini(memlockfini)
 

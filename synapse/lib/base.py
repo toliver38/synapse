@@ -119,6 +119,7 @@ class Base:
         self.isfini = False
         self.anitted = True  # For assertion purposes
         self.finievt = None
+        self.doneevt = None  # Used to indicate that fini has sucessfully run.
         self.entered = False
         self.exitinfo = None
 
@@ -354,6 +355,8 @@ class Base:
 
         for task in self._active_tasks.copy():
 
+            logger.info(f'[{self}] Killing active task: {task}')
+
             task.cancel()
             try:
                 await task
@@ -382,6 +385,7 @@ class Base:
             return self._syn_refs
 
         self.isfini = True
+        logger.info(f'[{self}] In fini')
 
         fevt = self.finievt
 
@@ -389,6 +393,7 @@ class Base:
             fevt.set()
 
         for base in list(self.tofini):
+            logger.info(f'[{self}] from self.tofini -> [{base}]')
             await base.fini()
 
         try:
@@ -396,7 +401,9 @@ class Base:
         except Exception:
             logger.exception(f'{self} - Exception during _kill_active_tasks')
 
-        for fini in self._fini_funcs:
+        lfnc = len(self._fini_funcs)
+        for i, fini in enumerate(self._fini_funcs, 1):
+            logger.info(f'[{self}] from self._fini_funcs -> [{fini}][{i}/{lfnc}]')
             try:
                 await s_coro.ornot(fini)
             except asyncio.CancelledError:
@@ -406,6 +413,13 @@ class Base:
 
         self._syn_funcs.clear()
         self._fini_funcs.clear()
+
+        devt = self.doneevt
+        if devt is not None:
+            devt.set()
+
+        logger.info(f'[{self}] done fini')
+
         return 0
 
     @contextlib.contextmanager
@@ -446,6 +460,27 @@ class Base:
             self.finievt = asyncio.Event()
 
         return await s_coro.event_wait(self.finievt, timeout)
+
+    async def waitdone(self, timeout=None):
+        '''
+        Wait for the base to fini() and have fini() be completed.
+
+        Returns:
+            None if timed out, True if fini completed.
+
+        Example:
+
+            base.waitdone(timeout=30)
+
+        '''
+
+        if self.isfini:
+            return True
+
+        if self.doneevt is None:
+            self.doneevt = asyncio.Event()
+
+        return await s_coro.event_wait(self.doneevt, timeout)
 
     def schedCoro(self, coro):
         '''
@@ -560,7 +595,7 @@ class Base:
         NOTE: This API may only be used when the ioloop is *also* the main thread.
         '''
         await self.addSignalHandlers()
-        return await self.waitfini()
+        return await self.waitdone()
 
     def waiter(self, count, *names):
         '''
