@@ -243,6 +243,15 @@ class CmdCoreTest(s_t_utils.SynTest):
             await cmdr.runCmdLine('storm --spawn inet:ipv4=1.2.3.4')
             outp.expect('#visi.woot')
 
+            # Multiline input can work too
+            outp = self.getTestOutp()
+            cmdr = await s_cmdr.getItemCmdr(core, outp=outp)
+            line = "storm [it:app:yara:rule=(test)] [:text='name\n" \
+                   "{words}']"
+            await cmdr.runCmdLine(line)
+            print(outp)
+            # self.true(outp.expect('it:yara:rule=a7a8ab7edecb01cf5e1e0380c4a94d93'))
+
     async def test_log(self):
 
         def check_locs_cleanup(cobj):
@@ -395,6 +404,15 @@ class CmdCoreTest(s_t_utils.SynTest):
             cmdr = await s_cmdr.getItemCmdr(prox, outp=outp)
             await cmdr.runCmdLine(f'storm --optsfile {optsfile_yaml} --file {stormfile}')
             self.true(outp.expect('inet:fqdn=woot.com'))
+
+            # multiline optsfile test
+            outp = self.getTestOutp()
+            cmdr = await s_cmdr.getItemCmdr(prox, outp=outp)
+            line = f"storm --optsfile {optsfile} [it:app:yara:rule=(test)] [:text='name\n" \
+                   f"{{words}}']"
+            await cmdr.runCmdLine(line)
+            print(outp)
+            # self.true(outp.expect('it:yara:rule=a7a8ab7edecb01cf5e1e0380c4a94d93'))
 
             # Sad path cases
             outp = self.getTestOutp()
