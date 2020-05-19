@@ -126,54 +126,53 @@ class StormSvcClient(s_base.Base, s_stormtypes.Proxy):
 
         names = [c.rsplit('.', 1)[-1] for c in clss]
 
-        if 'StormSvc' in names:
+        if 'StormSvc' in names and not self.core.mirror:
             self.info = await proxy.getStormSvcInfo()
 
-            if not self.core.mirror:
+            try:
+                await self.core._delStormSvcPkgs(self.iden)
+
+            except asyncio.CancelledError:  # pragma: no cover
+                raise
+
+            except Exception:
+                logger.exception(f'_delStormSvcPkgs failed for service {self.name} ({self.iden})')
+
+            # Register new packages
+            for pdef in self.info.get('pkgs', ()):
+
                 try:
-                    await self.core._delStormSvcPkgs(self.iden)
+                    # push the svciden in the package metadata for later reference.
+                    pdef['svciden'] = self.iden
+                    await self.core.addStormPkg(pdef)
 
                 except asyncio.CancelledError:  # pragma: no cover
                     raise
 
                 except Exception:
-                    logger.exception(f'_delStormSvcPkgs failed for service {self.name} ({self.iden})')
+                    name = pdef.get('name')
+                    logger.exception(f'addStormPkg ({name}) failed for service {self.name} ({self.iden})')
 
-                # Register new packages
-                for pdef in self.info.get('pkgs', ()):
+            # Set events and fire as needed
+            evts = self.info.get('evts')
+            try:
+                if evts is not None:
+                    self.sdef = await self.core.setStormSvcEvents(self.iden, evts)
 
-                    try:
-                        # push the svciden in the package metadata for later reference.
-                        pdef['svciden'] = self.iden
-                        await self.core.addStormPkg(pdef)
+            except asyncio.CancelledError:  # pragma: no cover
+                raise
 
-                    except asyncio.CancelledError:  # pragma: no cover
-                        raise
+            except Exception:
+                logger.exception(f'setStormSvcEvents failed for service {self.name} ({self.iden})')
 
-                    except Exception:
-                        name = pdef.get('name')
-                        logger.exception(f'addStormPkg ({name}) failed for service {self.name} ({self.iden})')
+            try:
+                await self.core._runStormSvcAdd(self.iden)
 
-                # Set events and fire as needed
-                evts = self.info.get('evts')
-                try:
-                    if evts is not None:
-                        self.sdef = await self.core.setStormSvcEvents(self.iden, evts)
+            except asyncio.CancelledError:  # pragma: no cover
+                raise
 
-                except asyncio.CancelledError:  # pragma: no cover
-                    raise
-
-                except Exception:
-                    logger.exception(f'setStormSvcEvents failed for service {self.name} ({self.iden})')
-
-                try:
-                    await self.core._runStormSvcAdd(self.iden)
-
-                except asyncio.CancelledError:  # pragma: no cover
-                    raise
-
-                except Exception:
-                    logger.exception(f'service.add storm hook failed for service {self.name} ({self.iden})')
+            except Exception:
+                logger.exception(f'service.add storm hook failed for service {self.name} ({self.iden})')
 
         async def unready():
             self.ready.clear()
