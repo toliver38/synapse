@@ -166,14 +166,14 @@ class StormSvcClient(s_base.Base, s_stormtypes.Proxy):
                 except Exception:
                     logger.exception(f'setStormSvcEvents failed for service {self.name} ({self.iden})')
 
-            try:
-                await self.core._runStormSvcAdd(self.iden)
+                try:
+                    await self.core._runStormSvcAdd(self.iden)
 
-            except asyncio.CancelledError:  # pragma: no cover
-                raise
+                except asyncio.CancelledError:  # pragma: no cover
+                    raise
 
-            except Exception:
-                logger.exception(f'service.add storm hook failed for service {self.name} ({self.iden})')
+                except Exception:
+                    logger.exception(f'service.add storm hook failed for service {self.name} ({self.iden})')
 
         async def unready():
             self.ready.clear()
