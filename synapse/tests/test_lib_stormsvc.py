@@ -734,7 +734,6 @@ class StormSvcTest(s_test.SynTest):
                         # Add a storm service
                         await core01.nodes(f'service.add real {lurl}')
                         await core01.nodes('$lib.service.wait(real)')
-                        await core01.sync()
 
                         # Make sure it shows up on leader
                         msgs = await core00.stormlist('help')

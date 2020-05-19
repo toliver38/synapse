@@ -180,6 +180,9 @@ class StormSvcClient(s_base.Base, s_stormtypes.Proxy):
 
         proxy.onfini(unready)
 
+        if self.core.mirror:
+            await self.core.sync()
+
         self.ready.set()
 
     async def deref(self, name):
