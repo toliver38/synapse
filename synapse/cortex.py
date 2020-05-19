@@ -1826,6 +1826,7 @@ class Cortex(s_cell.Cell):  # type: ignore
         Note:
             This cortex *must* be initialized from a backup of the target cortex!
         '''
+        self.mirror = True
         await self.nexsroot.setLeader(url, self.iden)
 
     async def _initCoreHive(self):

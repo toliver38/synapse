@@ -319,6 +319,7 @@ class SpawnCore(s_base.Base):
         self.layers = {}
         self.nexsroot = None
         self.spawninfo = spawninfo
+        self.mirror = False
 
         self.conf = spawninfo.get('conf')
         self.iden = spawninfo.get('iden')

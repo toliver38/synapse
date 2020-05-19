@@ -1577,6 +1577,11 @@ class StormTypesTest(s_test.SynTest):
 
             self.isin(newlayr, core.layers)
 
+            # Ensure new layer is set to current model revision
+            mainrev = await core.layers[mainlayr].getModelVers()
+            newrev = await core.layers[newlayr].getModelVers()
+            self.eq(mainrev, newrev)
+
             # List the layers in the cortex
             q = '''
                 for $layer in $lib.layer.list() {
