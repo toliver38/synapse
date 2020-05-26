@@ -12,7 +12,6 @@ import synapse.lib.base as s_base
 import synapse.lib.node as s_node
 import synapse.lib.time as s_time
 import synapse.lib.scope as s_scope
-import synapse.lib.types as s_types
 import synapse.lib.config as s_config
 import synapse.lib.scrape as s_scrape
 import synapse.lib.grammar as s_grammar
@@ -203,6 +202,7 @@ reqValidDdef = s_config.getJsValidator({
         'view': {'type': 'string', 'pattern': s_config.re_iden},
         'user': {'type': 'string', 'pattern': s_config.re_iden},
         'iden': {'type': 'string', 'pattern': s_config.re_iden},
+        'enabled': {'type': 'boolean', 'default': True},
         'stormopts': {
             'oneOf': [
                 {'type': 'null'},
@@ -784,6 +784,83 @@ stormcmds = (
     },
 )
 
+class DmonManager(s_base.Base):
+    '''
+    Manager for StormDmon objects.
+    '''
+    async def __anit__(self, core):
+        await s_base.Base.__anit__(self)
+        self.core = core
+        self.dmons = {}
+        self.enabled = False
+
+        self.onfini(self._finiAllDmons)
+
+    async def _finiAllDmons(self):
+        await asyncio.gather(*[dmon.fini() for dmon in self.dmons.values()])
+
+    async def _stopAllDmons(self):
+        await asyncio.gather(*[dmon.stop() for dmon in self.dmons.values()])
+
+    async def addDmon(self, iden, ddef):
+        dmon = await StormDmon.anit(self.core, iden, ddef)
+        self.dmons[iden] = dmon
+        # TODO Remove default=True when dmon enabled CRUD is implemented
+        if self.enabled and ddef.get('enabled', True):
+            await dmon.run()
+        return dmon
+
+    def getDmonRunlog(self, iden):
+        dmon = self.dmons.get(iden)
+        if dmon is not None:
+            return dmon._getRunLog()
+        return ()
+
+    def getDmon(self, iden):
+        return self.dmons.get(iden)
+
+    def getDmonDef(self, iden):
+        dmon = self.dmons.get(iden)
+        if dmon:
+            return dmon.pack()
+
+    def getDmonDefs(self):
+        return list(d.pack() for d in self.dmons.values())
+
+    async def popDmon(self, iden):
+        '''Remove the dmon and fini it if its exists.'''
+        logger.debug(f'Poping dmon {iden}')
+        dmon = self.dmons.pop(iden, None)
+        if dmon:
+            await dmon.fini()
+
+    async def start(self):
+        '''
+        Start all the dmons.
+        '''
+        if self.enabled:
+            return
+        for dmon in list(self.dmons.values()):
+            await dmon.run()
+        self.enabled = True
+
+    async def stop(self):
+        '''
+        Stop all the dmons.
+        '''
+        if not self.enabled:
+            return
+        await self._stopAllDmons()
+        await asyncio.sleep(0)
+
+    # TODO write enable/disable APIS.
+    # 1. Set dmon.status to 'disabled'
+    # 2. Be aware of ddef enabled flag to set status to 'disabled'.
+    # async def enableDmon(self, iden):
+    #     pass
+    # async def disableDmon(self, iden):
+    #     pass
+
 class StormDmon(s_base.Base):
     '''
     A background storm runtime which is restarted by the cortex.
@@ -798,20 +875,22 @@ class StormDmon(s_base.Base):
 
         self.task = None
         self.loop_task = None
+        self.enabled = ddef.get('enabled')
         self.user = core.auth.user(ddef.get('user'))
 
         self.count = 0
-        self.status = 'initializing'
+        self.status = 'initialized'
         self.err_evnt = asyncio.Event()
         self.runlog = collections.deque((), 2000)
 
-        async def fini():
-            if self.task is not None:
-                self.task.cancel()
-            if self.loop_task is not None:
-                self.loop_task.cancel()
+        self.onfini(self.stop)
 
-        self.onfini(fini)
+    async def stop(self):
+        if self.task is not None:
+            self.task.cancel()
+        if self.loop_task is not None:
+            self.loop_task.cancel()
+        self.status = 'stopped'
 
     async def run(self):
         self.task = self.schedCoro(self._run())
@@ -1272,6 +1351,11 @@ class Parser:
             if not self._get_store(item, argdef, todo, opts):
                 return
 
+        # check for help before processing other args
+        if opts.get('help'):
+            self.help()
+            return
+
         # process positional arguments
         todo = collections.deque(posargs)
 
@@ -1285,13 +1369,9 @@ class Parser:
             self.help(mesg)
             return
 
-        for names, argdef in self.allargs:
+        for _, argdef in self.allargs:
             if 'default' in argdef:
                 opts.setdefault(argdef['dest'], argdef['default'])
-
-        if opts.get('help'):
-            self.help()
-            return
 
         for names, argdef in self.reqopts:
             dest = argdef.get('dest')
@@ -1375,7 +1455,7 @@ class Parser:
             opts[dest] = vals
             return True
 
-        for i in range(nargs):
+        for _ in range(nargs):
 
             if not todo or self._is_opt(todo[0]):
                 mesg = f'{nargs} arguments are required for {name}.'
@@ -2359,7 +2439,7 @@ class ScrapeCmd(Cmd):
 
             refs = await s_stormtypes.toprim(self.opts.refs)
 
-            #TODO some kind of repr or as-string option on toprims
+            # TODO some kind of repr or as-string option on toprims
             todo = await s_stormtypes.toprim(self.opts.values)
 
             # if a list of props haven't been specified, then default to ALL of them

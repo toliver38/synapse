@@ -1052,7 +1052,7 @@ class MigrationTest(s_t_utils.SynTest):
                 nes1 = [nodeedits for offs, nodeedits in lyr1.nodeeditlog.iter(0)]
                 sodes1 = [await lyr1.storNodeEdits(nes[0], None) for nes in nes1]
 
-                await self._checkCore(core, tdata)
+                await self._checkCore(core, tdata, nodesonly=True)
 
     async def test_migr_splice_errs(self):
         conf = {
@@ -1100,7 +1100,7 @@ class MigrationTest(s_t_utils.SynTest):
 
                 # the only nodeedits should be for file:byte node adds
                 exp = len([x for x in tdata['podes'] if x[0][0] == 'inet:fqdn'])
-                offs = lyr0.getNodeEditOffset()
+                offs = await lyr0.getNodeEditOffset()
                 self.eq(exp, offs)
                 nes = [nodeedits for offs, nodeedits in lyr0.nodeeditlog.iter(0)]
                 self.len(exp, nes)
