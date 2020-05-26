@@ -133,7 +133,12 @@ class Cmd:
 
                 elif styp == 'enum':
                     vals = swit[1].get('enum:vals')
-                    valu, off = s_parser.parse_cmd_string(text, off)
+                    try:
+                        valu, off = s_parser.parse_cmd_string(text, off)
+                    except Exception:
+                        logger.exception('oh shit')
+                        print(80 * '*')
+                        raise
                     if valu not in vals:
                         raise s_exc.BadSyntax(mesg='%s (%s)' % (swit[0], '|'.join(vals)),
                                                    text=text)

@@ -249,8 +249,15 @@ class CmdCoreTest(s_t_utils.SynTest):
             line = "storm [it:app:yara:rule=(test)] [:text='name\n" \
                    "{words}']"
             await cmdr.runCmdLine(line)
+            self.true(outp.expect('it:app:yara:rule=3e23299fc3a8fc27ea1d9a2d497a3a56'))
+
+            outp = self.getTestOutp()
+            cmdr = await s_cmdr.getItemCmdr(core, outp=outp)
+            line = "storm --editformat none [it:app:yara:rule=(test)] [:text='name\n" \
+                   "{words}']"
+            await cmdr.runCmdLine(line)
             print(outp)
-            # self.true(outp.expect('it:yara:rule=a7a8ab7edecb01cf5e1e0380c4a94d93'))
+            # self.true(outp.expect('it:app:yara:rule=3e23299fc3a8fc27ea1d9a2d497a3a56'))
 
     async def test_log(self):
 
@@ -360,7 +367,7 @@ class CmdCoreTest(s_t_utils.SynTest):
 
                 await cmdr.fini()
 
-    async def test_storm_save_nodes(self):
+    async def test_save_nodes(self):
 
         async with self.getTestCoreAndProxy() as (core, prox):
 
@@ -379,7 +386,7 @@ class CmdCoreTest(s_t_utils.SynTest):
             self.eq({tuple(n[0]) for n in jsdata},
                     {('test:int', 20), ('test:int', 30)})
 
-    async def test_storm_file_optfile(self):
+    async def test_optfile(self):
 
         async with self.getTestCoreAndProxy() as (core, prox):
 
