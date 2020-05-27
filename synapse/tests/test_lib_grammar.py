@@ -1096,6 +1096,8 @@ class GrammarTest(s_t_utils.SynTest):
 
     def test_parse_cmd_string(self):
         self.eq(('newp', 9), s_parser.parse_cmd_string('help newp', 5))
+        self.eq(('newp', 9), s_parser.parse_cmd_string('help newp beep.sys boop', 5))
+        self.eq(('beep.sys', 18), s_parser.parse_cmd_string('help newp beep.sys boop', 9))
 
         query = f"[it:app:yara:rule=(test)] [:text='name\n" \
                 f"{{words}}']"
