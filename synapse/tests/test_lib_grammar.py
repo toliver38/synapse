@@ -1097,6 +1097,11 @@ class GrammarTest(s_t_utils.SynTest):
     def test_parse_cmd_string(self):
         self.eq(('newp', 9), s_parser.parse_cmd_string('help newp', 5))
 
+        query = f"[it:app:yara:rule=(test)] [:text='name\n" \
+                f"{{words}}']"
+        line = f"storm --editformat none {query}"
+        self.eq(('none', 22), s_parser.parse_cmd_string(line, 18))
+
     def test_syntax_error(self):
         query = 'test:str )'
         parser = s_parser.Parser(query)

@@ -509,6 +509,7 @@ JUSTCHARS: /[^()=\[\]{}'"\s]*[^,()=\[\]{}'"\s]/
 
 CmdStringParser = lark.Lark(CmdStringGrammar,
                             start='cmdstring',
+                            ambiguity='explicit',
                             propagate_positions=True)
 
 def parse_cmd_string(text, off):
@@ -516,6 +517,7 @@ def parse_cmd_string(text, off):
     Parse in a command line string which may be quoted.
     '''
     tree = CmdStringParser.parse(text[off:])
+    assert '_ambig' not in str(tree)
     valu, newoff = CmdStringer().transform(tree)
     return valu, off + newoff
 
