@@ -27,93 +27,132 @@ geotestmodel = {
 }
 
 geojson0 = {
-  "type": "GeometryCollection",
-  "bbox": [-110, -45, 110, 45],
-  "geometries": [
-    {
-      "type": "Point",
-      "coordinates": [0, 0]
-    },
-    {
-      "type": "LineString",
-      "coordinates": [[-110, 45], [110, -45]]
-    },
-    {
-      "type": "Polygon",
-      "coordinates": [
-        [
-          [100.0, 0.0],
-          [101.0, 0.0],
-          [101.0, 1.0],
-          [100.0, 1.0],
-          [100.0, 0.0]
-        ],
-        [
-          [100.8, 0.8],
-          [100.8, 0.2],
-          [100.2, 0.2],
-          [100.2, 0.8],
-          [100.8, 0.8]
-        ]
-      ]
-    }
-  ]
+    "type": "GeometryCollection",
+    "bbox": [-110, -45, 110, 45],
+    "geometries": [
+        {
+            "type": "Point",
+            "coordinates": [0, 0]
+        },
+        {
+            "type": "LineString",
+            "coordinates": [[-110, 45], [110, -45]]
+        },
+        {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [100.0, 0.0],
+                    [101.0, 0.0],
+                    [101.0, 1.0],
+                    [100.0, 1.0],
+                    [100.0, 0.0]
+                ],
+                [
+                    [100.8, 0.8],
+                    [100.8, 0.2],
+                    [100.2, 0.2],
+                    [100.2, 0.8],
+                    [100.8, 0.8]
+                ]
+            ]
+        }
+    ]
 }
 
 geojson1 = {
-  "type": "MultiPolygon",
-  "coordinates": [
-    [
-      [
-        [102.0, 2.0, 10],
-        [103.0, 2.0, 10],
-        [103.0, 3.0, 10],
-        [102.0, 3.0, 10],
-        [102.0, 2.0, 10]
-      ]
-    ],
-    [
-      [
-        [100.0, 0.0, 20],
-        [101.0, 0.0, 20],
-        [101.0, 1.0, 20],
-        [100.0, 1.0, 20],
-        [100.0, 0.0, 20]
-      ],
-      [
-        [100.2, 0.2, 30],
-        [100.8, 0.2, 30],
-        [100.8, 0.8, 30],
-        [100.2, 0.8, 30],
-        [100.2, 0.2, 30]
-      ]
+    "type": "MultiPolygon",
+    "coordinates": [
+        [
+            [
+                [102.0, 2.0, 10],
+                [103.0, 2.0, 10],
+                [103.0, 3.0, 10],
+                [102.0, 3.0, 10],
+                [102.0, 2.0, 10]
+            ]
+        ],
+        [
+            [
+                [100.0, 0.0, 20],
+                [101.0, 0.0, 20],
+                [101.0, 1.0, 20],
+                [100.0, 1.0, 20],
+                [100.0, 0.0, 20]
+            ],
+            [
+                [100.2, 0.2, 30],
+                [100.8, 0.2, 30],
+                [100.8, 0.8, 30],
+                [100.2, 0.8, 30],
+                [100.2, 0.2, 30]
+            ]
+        ]
     ]
-  ]
 }
 
 geojson2 = {
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "id": "1",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [0, 0]
-      },
-      "properties": {
-        "name": "basic"
-      }
-    }
-  ]
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "id": "1",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [0, 0]
+            },
+            "properties": {
+                "name": "basic"
+            }
+        }
+    ]
 }
+
+badcopnodonut = {
+    "type": "GeometryCollection",
+    "geometries": [
+        {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [100.0, 0.0],
+                    [101.0, 0.0],
+                    [101.0, 1.0],
+                    [100.0, 1.0]
+                ]
+            ]
+        }
+    ]
+}
+
+worscopnodonut = {
+    "type": "GeometryCollection",
+    "geometries": [
+        {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [100.0, 0.0],
+                    [101.0, 0.0],
+                    [101.0, 1.0],
+                    [102.0, 1.0],
+                    [102.0, 2.0],
+                    [102.0, 1.0],
+                    [101.0, 1.0],
+                    [100.0, 1.0],
+                    [100.0, 0.0]
+                ]
+            ]
+        }
+    ]
+}
+
 
 class GeoTstModule(s_module.CoreModule):
     def getModelDefs(self):
         return (
             ('geo:test', geotestmodel),
         )
-
 
 class GeoTest(s_t_utils.SynTest):
 
@@ -123,7 +162,6 @@ class GeoTest(s_t_utils.SynTest):
         formlatlon = 'geo:latlong'
 
         async with self.getTestCore() as core:
-
             # Latitude Type Tests =====================================================================================
             t = core.model.type(formlat)
             self.raises(s_exc.BadTypeValu, t.norm, '-90.1')
@@ -379,12 +417,11 @@ class GeoTest(s_t_utils.SynTest):
             self.len(1, nodes)
 
         async with self.getTestCore() as core:
-
             await core.loadCoreModule('synapse.tests.test_model_geospace.GeoTstModule')
             # Lift behavior for a node whose has a latlong as their primary property
             nodes = await core.nodes('[(test:latlong=(10, 10) :dist=10m) '
-                                    '(test:latlong=(10.1, 10.1) :dist=20m) '
-                                    '(test:latlong=(3, 3) :dist=5m)]')
+                                     '(test:latlong=(10.1, 10.1) :dist=20m) '
+                                     '(test:latlong=(3, 3) :dist=5m)]')
             self.len(3, nodes)
 
             nodes = await core.nodes('test:latlong*near=((10, 10), 5km)')
@@ -432,6 +469,11 @@ class GeoTest(s_t_utils.SynTest):
             opts = {'vars': {'geojson': geojson2}}
             nodes = await core.nodes('[ geo:place=* :geojson=$geojson ]', opts=opts)
 
+            opts = {'vars': {'geojson': badcopnodonut}}
+            nodes = await core.nodes('[ geo:place=* :geojson=$geojson ]', opts=opts)
+            opts = {'vars': {'geojson': worscopnodonut}}
+            nodes = await core.nodes('[ geo:place=* :geojson=$geojson ]', opts=opts)
+
     def test_shapely(self):
         # depending on your version, use: from shapely.geometry import shape, Point
 
@@ -448,14 +490,136 @@ class GeoTest(s_t_utils.SynTest):
         #     if polygon.contains(point):
         #         print
         #         'Found containing polygon:', feature
-        import shapely
+        import json
+        import shapely.geometry as sgm
+        import geojson
 
         points = (
             (-122.7924463, 45.4519896),
             (100, 0.3),
         )
 
-        for feature in geojson0.get('')
+        # for feature in geojson0.get(''):
+        #     pass
+
+        obj = geojson.loads(json.dumps(geojson0))
+        print(obj)
+        print(type(obj))
+
+        def getPolygons(obj):
+            '''Yield polygons out of a geojson struct'''
+            otyp = obj.get('type')
+            if otyp == 'FeatureCollection':
+                features = obj.get('features')
+                for feat in features:
+                    yield from getPolygons(feat)
+            elif otyp == 'Feature':
+                geometry = obj.get('geometry')
+                if geometry is None:
+                    return
+                yield from getPolygons(geometry)
+                # geotype = geometry.get('type')
+                # if geotype == 'Polygon':
+                #     yield geometry.get('coordinates')
+                # # TODO support other polys?
+            elif otyp == 'GeometryCollection':
+                geometry = obj.get('geometries')
+                for geo in geometry:
+                    yield from getPolygons(geo)
+            elif otyp == 'Polygon':
+                coords = obj.get('coordinates')
+                yield coords
+            elif otyp == 'MultiPolygon':
+                coords_list = obj.get('coordinates')
+                for coords in coords_list:
+                    yield coords
+
+        blob = {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [102.0, 0.5]
+                },
+                "properties": {
+                    "prop0": "value0"
+                }
+            },
+                {
+                "type": "Feature",
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": [
+                        [102.0, 0.0],
+                        [103.0, 1.0],
+                        [104.0, 0.0],
+                        [105.0, 1.0]
+                    ]
+                },
+                "properties": {
+                    "prop0": "value0",
+                    "prop1": 0.0
+                }
+            }, {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [100.0, 0.0],
+                            [101.0, 0.0],
+                            [101.0, 1.0],
+                            [100.0, 1.0],
+                            [100.0, 0.0]
+                        ]
+                    ]
+                },
+                "properties": {
+                    "prop0": "value0",
+                    "prop1": {
+                        "this": "that"
+                    }
+                }
+            }]
+        }
+
+        obj = geojson.loads(json.dumps(blob))
+        print(obj)
+        print(obj.is_valid)
+        print(type(obj))
+
+        for k, v in obj.items():
+            print(k)
+            print(v)
+
+        print('--------------------------------')
+        obj = geojson.loads(json.dumps(badcopnodonut))
+        print(obj)
+        print(obj.is_valid)
+        print(obj.errors())
+        print(type(obj))
+        print(list(obj))
+        print(dir(obj))
+
+        print('--------------------------------')
+        obj = geojson.loads(json.dumps(worscopnodonut))
+        print(obj)
+        print(obj.is_valid)
+        print(obj.errors())
+
+        print(20 * '*%*')
+
+        for poly in getPolygons(blob):
+            print(poly)
+            print('ooo')
+            shape = sgm.polygon.Polygon()
+
+        for poly in getPolygons(geojson2):
+            print(poly)
+            print('ooo')
+
+        print('fin -!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1')
 
     async def test_geo_dist_offset(self):
 
