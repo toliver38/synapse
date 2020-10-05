@@ -108,7 +108,7 @@ geojson2 = {
     ]
 }
 
-badcopnodonut = {
+brokenpoly = {
     "type": "GeometryCollection",
     "geometries": [
         {
@@ -125,7 +125,7 @@ badcopnodonut = {
     ]
 }
 
-worscopnodonut = {
+worsebrokenpoly = {
     "type": "GeometryCollection",
     "geometries": [
         {
@@ -469,9 +469,9 @@ class GeoTest(s_t_utils.SynTest):
             opts = {'vars': {'geojson': geojson2}}
             nodes = await core.nodes('[ geo:place=* :geojson=$geojson ]', opts=opts)
 
-            opts = {'vars': {'geojson': badcopnodonut}}
+            opts = {'vars': {'geojson': brokenpoly}}
             nodes = await core.nodes('[ geo:place=* :geojson=$geojson ]', opts=opts)
-            opts = {'vars': {'geojson': worscopnodonut}}
+            opts = {'vars': {'geojson': worsebrokenpoly}}
             nodes = await core.nodes('[ geo:place=* :geojson=$geojson ]', opts=opts)
 
     def test_shapely(self):
@@ -594,7 +594,7 @@ class GeoTest(s_t_utils.SynTest):
             print(v)
 
         print('--------------------------------')
-        obj = geojson.loads(json.dumps(badcopnodonut))
+        obj = geojson.loads(json.dumps(brokenpoly))
         print(obj)
         print(obj.is_valid)
         print(obj.errors())
@@ -603,7 +603,7 @@ class GeoTest(s_t_utils.SynTest):
         print(dir(obj))
 
         print('--------------------------------')
-        obj = geojson.loads(json.dumps(worscopnodonut))
+        obj = geojson.loads(json.dumps(worsebrokenpoly))
         print(obj)
         print(obj.is_valid)
         print(obj.errors())
@@ -623,7 +623,7 @@ class GeoTest(s_t_utils.SynTest):
         print(thing)
         print(dir(thing))
 
-        thing = sgm.mapping(geojson.loads(json.dumps(worscopnodonut)))
+        thing = sgm.mapping(geojson.loads(json.dumps(worsebrokenpoly)))
         print(thing)
         print(dir(thing))
 
