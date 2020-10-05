@@ -619,6 +619,34 @@ class GeoTest(s_t_utils.SynTest):
             print(poly)
             print('ooo')
 
+        thing = sgm.mapping(geojson.loads(json.dumps(blob)))
+        print(thing)
+        print(dir(thing))
+
+        thing = sgm.mapping(geojson.loads(json.dumps(worscopnodonut)))
+        print(thing)
+        print(dir(thing))
+
+        print('polly check')
+        tps = []
+
+        for poly in getPolygons(geojson0):
+            shell = poly
+            holes = None
+            if len(poly) > 1:
+                shell = poly[0]
+                holes = poly[1:]
+            polygony = sgm.Polygon(shell=shell, holes=holes)
+            print(polygony)
+            for point in (
+                [100.1, 0.1, ],
+                [100.1, 0.2],
+                [100, 3.0],
+            ):
+                p = sgm.Point(*point)
+                print(p)
+                print(polygony.contains(p))
+
         print('fin -!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1')
 
     async def test_geo_dist_offset(self):
