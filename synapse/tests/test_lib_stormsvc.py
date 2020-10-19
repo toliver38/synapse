@@ -856,3 +856,81 @@ class StormSvcTest(s_test.SynTest):
                         q = 'for ($o, $m) in $lib.queue.get(vertex).gets(wait=10) {return (($o, $m))}'
                         retn = await core01.callStorm(q)
                         self.eq(retn, (0, 'done'))
+
+    async def test_storm_svc_mirror2(self):
+        import synapse.cortex as s_cortex
+
+        with self.getTestDir() as dirn:
+
+            path00 = s_common.gendir(dirn, 'core00')
+            path01 = s_common.gendir(dirn, 'core01')
+
+            async with self.getTestDmon() as dmon:
+
+                dmon.share('real', RealService())
+                host, port = dmon.addr
+                lurl = f'tcp://127.0.0.1:{port}/real'
+
+                core00 = await s_cortex.Cortex.anit(path00)
+
+                await core00.nodes('[ inet:ipv4=1.2.3.4 ]')
+                await core00.fini()
+
+                s_tools_backup.backup(path00, path01)
+
+                core00 = await s_cortex.Cortex.anit(path00)
+
+                url = core00.getLocalUrl()
+
+                conf = {'mirror': url}
+
+                core01 = await s_cortex.Cortex.anit(path01, conf=conf)
+
+                await core01.sync()
+
+                # Add a storm service
+                await core01.nodes(f'service.add real {lurl}')
+                await core01.nodes('$lib.service.wait(real)')
+
+                # Make sure it shows up on leader
+                msgs = await core00.stormlist('help')
+                self.stormIsInPrint('service: real', msgs)
+                self.stormIsInPrint('package: foo', msgs)
+                self.stormIsInPrint('foobar', msgs)
+                self.isin('foo.bar', core00.stormmods)
+
+                queue = core00.multiqueue.list()
+                self.len(1, queue)
+                self.eq('vertex', queue[0]['name'])
+                self.nn(core00.getStormCmd('ohhai'))
+
+                # Make sure it shows up on mirror
+                msgs = await core01.stormlist('help')
+                self.stormIsInPrint('service: real', msgs)
+                self.stormIsInPrint('package: foo', msgs)
+                self.stormIsInPrint('foobar', msgs)
+                self.isin('foo.bar', core01.stormmods)
+
+                queue = core01.multiqueue.list()
+                self.len(1, queue)
+                self.eq('vertex', queue[0]['name'])
+                self.nn(core01.getStormCmd('ohhai'))
+
+                # Delete storm service
+                iden = core01.getStormSvcs()[0].iden
+                await core01.delStormSvc(iden)
+                await core01.sync()
+
+                # Make sure it got removed from both
+                self.none(core00.getStormCmd('ohhai'))
+                q = 'for ($o, $m) in $lib.queue.get(vertex).gets(wait=10) {return (($o, $m))}'
+                retn = await core00.callStorm(q)
+                self.eq(retn, (0, 'done'))
+
+                self.none(core01.getStormCmd('ohhai'))
+                q = 'for ($o, $m) in $lib.queue.get(vertex).gets(wait=10) {return (($o, $m))}'
+                retn = await core01.callStorm(q)
+                self.eq(retn, (0, 'done'))
+
+                await core01.fini()
+                await core00.fini()
