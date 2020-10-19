@@ -1579,6 +1579,7 @@ class Cortex(s_cell.Cell):  # type: ignore
             return
 
         sdef['added'] = True
+        logger.info(f'Setting svchive valu {iden} -> {sdef}')
         await self.svchive.set(iden, sdef)
 
     async def runStormSvcEvent(self, iden, name):
@@ -1601,7 +1602,7 @@ class Cortex(s_cell.Cell):  # type: ignore
             self.schedCoro(coro)
 
     async def _setStormSvc(self, sdef):
-
+        logger.info(f'Creating StormSvcClient for {sdef}')
         ssvc = await s_stormsvc.StormSvcClient.anit(self, sdef)
 
         self.onfini(ssvc)

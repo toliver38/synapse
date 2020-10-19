@@ -1,3 +1,4 @@
+import logging
 import contextlib
 import synapse.exc as s_exc
 import synapse.common as s_common
@@ -9,6 +10,8 @@ import synapse.lib.cell as s_cell
 import synapse.lib.stormsvc as s_stormsvc
 
 import synapse.tools.backup as s_tools_backup
+
+logger = logging.getLogger(__name__)
 
 old_pkg = {
     'name': 'old',
@@ -858,6 +861,8 @@ class StormSvcTest(s_test.SynTest):
                         self.eq(retn, (0, 'done'))
 
     async def test_storm_svc_mirror2(self):
+
+        import asyncio
         import synapse.cortex as s_cortex
 
         with self.getTestDir() as dirn:
@@ -916,21 +921,23 @@ class StormSvcTest(s_test.SynTest):
                 self.eq('vertex', queue[0]['name'])
                 self.nn(core01.getStormCmd('ohhai'))
 
-                # Delete storm service
-                iden = core01.getStormSvcs()[0].iden
-                await core01.delStormSvc(iden)
                 await core01.sync()
 
-                # Make sure it got removed from both
-                self.none(core00.getStormCmd('ohhai'))
-                q = 'for ($o, $m) in $lib.queue.get(vertex).gets(wait=10) {return (($o, $m))}'
-                retn = await core00.callStorm(q)
-                self.eq(retn, (0, 'done'))
+                mirorr_url = core01.getLocalUrl()
 
-                self.none(core01.getStormCmd('ohhai'))
-                q = 'for ($o, $m) in $lib.queue.get(vertex).gets(wait=10) {return (($o, $m))}'
-                retn = await core01.callStorm(q)
-                self.eq(retn, (0, 'done'))
+                await core01.fini()
+                await core00.fini()
 
+                # swap leadership
+
+                logger.info('Bringing up core01 as the master')
+                core01 = await s_cortex.Cortex.anit(path01)
+
+                await asyncio.sleep(8)
+
+                logger.info('Bringing up core00 as the follower')
+                core00 = await s_cortex.Cortex.anit(path00, conf={'mirror': mirorr_url})
+
+                await asyncio.sleep(8)
                 await core01.fini()
                 await core00.fini()
