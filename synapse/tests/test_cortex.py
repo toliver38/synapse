@@ -1929,8 +1929,36 @@ class CortexBasicTest(s_t_utils.SynTest):
                 'commands': ()
             }
 
-            with self.raises(s_exc.BadVersion):
+            with self.raises(s_exc.BadVersion) as badv:
                 await core.addStormPkg(oldverpkg)
+            exp = 'Storm package versionfail requires Synapse (1337, 0, 0) or newer'
+            self.isin(exp, badv.exception.get('mesg'))
+
+            newverpkg = {
+                'name': 'versionfail',
+                'version': (0, 0, 1),
+                'synapse_maxversion': (0, 0, 1),
+                'commands': ()
+            }
+
+            with self.raises(s_exc.BadVersion) as badv:
+                await core.addStormPkg(newverpkg)
+            exp = 'Storm package versionfail requires Synapse (0, 0, 1) or older'
+            self.isin(exp, badv.exception.get('mesg'))
+
+            rangeverpkg = {
+                'name': 'versionfail',
+                'version': (0, 0, 1),
+                'synapse_minversion': (1337, 0, 0),
+                'synapse_maxversion': (9001, 0, 0),
+                'commands': ()
+            }
+
+            with self.raises(s_exc.BadVersion) as badv:
+                await core.addStormPkg(rangeverpkg)
+            exp = 'Storm package versionfail requires Synapse version ' \
+                  '>= (1337, 0, 0) and <= (9001, 0, 0)'
+            self.isin(exp, badv.exception.get('mesg'))
 
             noverpkg = {
                 'name': 'nomin',
@@ -1938,7 +1966,7 @@ class CortexBasicTest(s_t_utils.SynTest):
                 'commands': ()
             }
 
-            # Package with no synapse_minversion shouldn't raise
+            # Package with no version requirements shouldn't raise
             await core.addStormPkg(noverpkg)
 
     async def test_onsetdel(self):

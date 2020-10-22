@@ -505,6 +505,7 @@ class SpawnCore(s_base.Base):
     # A little selective inheritance
     # TODO:  restructure cortex to avoid this hackery
     _setStormSvc = s_cortex.Cortex._setStormSvc
+    _confirmPkgVersion = s_cortex.Cortex._confirmPkgVersion
     _confirmStormPkg = s_cortex.Cortex._confirmStormPkg
     _dropStormPkg = s_cortex.Cortex._dropStormPkg
     _reqStormCmd = s_cortex.Cortex._reqStormCmd

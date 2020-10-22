@@ -162,6 +162,10 @@ reqValidPkgdef = s_config.getJsValidator({
             'type': ['array', 'null'],
             'items': {'type': 'number'}
         },
+        'synapse_maxversion': {
+            'type': ['array', 'null'],
+            'items': {'type': 'number'}
+        },
         'modules': {
             'type': ['array', 'null'],
             'items': {'$ref': '#/definitions/module'}

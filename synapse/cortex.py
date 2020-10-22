@@ -1347,6 +1347,31 @@ class Cortex(s_cell.Cell):  # type: ignore
             name = pkgdef.get('name', '')
             logger.exception(f'Error loading pkg: {name}, {str(e)}')
 
+    def _confirmPkgVersion(self, pkgdef):
+        '''
+        Validate Cortex meets storm package version requirements.  Raises if invalid.
+        '''
+        pkgname = pkgdef.get('name')
+
+        minversion = pkgdef.get('synapse_minversion')
+        maxversion = pkgdef.get('synapse_maxversion')
+
+        if (minversion is not None and maxversion is not None and
+            (minversion > s_version.version or maxversion < s_version.version)):
+            mesg = f'Storm package {pkgname} requires Synapse version >= {minversion} ' \
+                   f'and <= {maxversion} but Cortex is running {s_version.version}'
+            raise s_exc.BadVersion(mesg=mesg)
+
+        elif minversion is not None and minversion > s_version.version:
+            mesg = f'Storm package {pkgname} requires Synapse {minversion} or ' \
+                   f'newer but Cortex is running {s_version.version}'
+            raise s_exc.BadVersion(mesg=mesg)
+
+        elif maxversion is not None and maxversion < s_version.version:
+            mesg = f'Storm package {pkgname} requires Synapse {maxversion} or ' \
+                   f'older but Cortex is running {s_version.version}'
+            raise s_exc.BadVersion(mesg=mesg)
+
     async def _confirmStormPkg(self, pkgdef):
         '''
         Validate a storm package for loading.  Raises if invalid.
@@ -1354,18 +1379,13 @@ class Cortex(s_cell.Cell):  # type: ignore
         # Validate package def
         s_storm.reqValidPkgdef(pkgdef)
 
-        pkgname = pkgdef.get('name')
-
-        # Check minimum synapse version
-        minversion = pkgdef.get('synapse_minversion')
-        if minversion is not None and minversion > s_version.version:
-            mesg = f'Storm package {pkgname} requires Synapse {minversion} but ' \
-                   f'Cortex is running {s_version.version}'
-            raise s_exc.BadVersion(mesg=mesg)
+        # Check required Synapse version
+        self._confirmPkgVersion(pkgdef)
 
         # Validate storm contents from modules and commands
         mods = pkgdef.get('modules', ())
         cmds = pkgdef.get('commands', ())
+        pkgname = pkgdef.get('name')
         svciden = pkgdef.get('svciden')
 
         for mdef in mods:
