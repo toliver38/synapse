@@ -902,7 +902,7 @@ class StormSvcTest(s_test.SynTest):
 
                 await core01.sync()
 
-                # Add a storm service
+                # Add a storm service from the mirror
                 await core01.nodes(f'service.add real {lurl}')
                 await core01.nodes('$lib.service.wait(real)')
 
@@ -913,6 +913,13 @@ class StormSvcTest(s_test.SynTest):
                 self.stormIsInPrint('foobar', msgs)
                 self.isin('foo.bar', core00.stormmods)
 
+                # Totally unsafe access
+                iden = list(core00.svcsbyiden.keys())[0]
+                sdef00 = core00.svchive.get(iden)
+                logger.info(sdef00)
+                self.true(sdef00.get('added'))
+
+                # queue has a thing
                 queue = core00.multiqueue.list()
                 self.len(1, queue)
                 self.eq('vertex', queue[0]['name'])
@@ -925,6 +932,12 @@ class StormSvcTest(s_test.SynTest):
                 self.stormIsInPrint('foobar', msgs)
                 self.isin('foo.bar', core01.stormmods)
 
+                # Svc added bool populated
+                sdef01 = core01.svchive.get(iden)
+                logger.info(sdef01)
+                self.true(sdef01.get('added'))
+
+                # Queue is available
                 queue = core01.multiqueue.list()
                 self.len(1, queue)
                 self.eq('vertex', queue[0]['name'])
@@ -946,6 +959,9 @@ class StormSvcTest(s_test.SynTest):
 
                 logger.info('Bringing up core00 as the follower')
                 core00 = await s_cortex.Cortex.anit(path00, conf={'mirror': mirorr_url})
+
+                # Ideally verify that the add event did not re-fire
+                # when leadership was swapped
 
                 await asyncio.sleep(8)
                 await core01.fini()
