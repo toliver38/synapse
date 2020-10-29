@@ -201,7 +201,7 @@ class View(s_nexus.Pusher):  # type: ignore
         user = self.core._userFromOpts(opts)
 
         MSG_QUEUE_SIZE = 1000
-        chan = asyncio.Queue(MSG_QUEUE_SIZE, loop=self.loop)
+        chan = asyncio.Queue(MSG_QUEUE_SIZE)
 
         info = {'query': text, 'opts': opts}
         synt = await self.core.boss.promote('storm', user=user, info=info)
@@ -244,6 +244,9 @@ class View(s_nexus.Pusher):  # type: ignore
                     else:
                         async for item in snap.storm(text, opts=opts, user=user):
                             count += 1
+
+            except s_exc.StormExit:
+                pass
 
             except asyncio.CancelledError:
                 logger.warning('Storm runtime cancelled.')
@@ -685,3 +688,14 @@ class View(s_nexus.Pusher):  # type: ignore
         return {
             'iden': self.iden,
         }
+
+    async def addNodeEdits(self, edits, meta):
+        '''
+        A telepath compatible way to apply node edits to a view.
+
+        NOTE: This does cause trigger execution.
+        '''
+        user = await self.core.auth.reqUser(meta.get('user'))
+        async with await self.snap(user=user) as snap:
+            # go with the anti-pattern for now...
+            await snap.applyNodeEdits(edits)

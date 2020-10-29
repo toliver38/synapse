@@ -576,7 +576,7 @@ class AsyncStreamEvent(io.StringIO, asyncio.Event):
     '''
     def __init__(self, *args, **kwargs):
         io.StringIO.__init__(self, *args, **kwargs)
-        asyncio.Event.__init__(self, loop=asyncio.get_running_loop())
+        asyncio.Event.__init__(self)
         self.mesg = ''
 
     def setMesg(self, mesg):
@@ -727,9 +727,9 @@ class SynTest(unittest.TestCase):
             yield regrdir
 
     @contextlib.asynccontextmanager
-    async def getRegrCore(self, vers):
+    async def getRegrCore(self, vers, conf=None):
         with self.getRegrDir('cortexes', vers) as dirn:
-            async with await s_cortex.Cortex.anit(dirn) as core:
+            async with await s_cortex.Cortex.anit(dirn, conf=conf) as core:
                 yield core
 
     def skipIfNoInternet(self):  # pragma: no cover

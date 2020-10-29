@@ -920,6 +920,22 @@ class Cortex(s_cell.Cell):  # type: ignore
         self.pkghive = await pkghive.dict()
         self.svchive = await svchive.dict()
 
+        self.deprlocks = await self.hive.get(('cortex', 'model', 'deprlocks'), {})
+        # TODO: 3.0.0 conversion will truncate this hive key
+        for name, locked in self.deprlocks.items():
+
+            form = self.model.form(name)
+            if form is not None:
+                form.locked = locked
+
+            prop = self.model.prop(name)
+            if prop is not None:
+                prop.locked = locked
+
+            _type = self.model.type(name)
+            if _type is not None:
+                _type.locked = locked
+
         # Finalize coremodule loading & give svchive a shot to load
         await self._initPureStormCmds()
 
@@ -939,6 +955,8 @@ class Cortex(s_cell.Cell):  # type: ignore
     async def initServiceRuntime(self):
 
         # do any post-nexus initialization here...
+        if self.isactive:
+            await self._checkNexsIndx()
         await self._initCoreMods()
         await self._initStormSvcs()
 
@@ -961,6 +979,42 @@ class Cortex(s_cell.Cell):  # type: ignore
     async def bumpSpawnPool(self):
         if self.spawnpool is not None:
             await self.spawnpool.bump()
+
+    @s_nexus.Pusher.onPushAuto('model:depr:lock')
+    async def setDeprLock(self, name, locked):
+
+        todo = []
+        prop = self.model.prop(name)
+        if prop is not None and prop.deprecated:
+            todo.append(prop)
+
+        _type = self.model.type(name)
+        if _type is not None and _type.deprecated:
+            todo.append(_type)
+
+        if not todo:
+            mesg = f'setDeprLock() called on non-existant or non-deprecated form, property, or type.'
+            raise s_exc.NoSuchProp(name=name, mesg=mesg)
+
+        self.deprlocks[name] = locked
+        await self.hive.set(('cortex', 'model', 'deprlocks'), self.deprlocks)
+
+        for elem in todo:
+            elem.locked = locked
+
+    async def getDeprLocks(self):
+        '''
+        Return a dictionary of deprecated properties and their lock status.
+        '''
+        retn = {}
+
+        for prop in self.model.props.values():
+            if not prop.deprecated:
+                continue
+
+            retn[prop.full] = prop.locked
+
+        return retn
 
     async def addCoreQueue(self, name, info):
 
@@ -1354,11 +1408,19 @@ class Cortex(s_cell.Cell):  # type: ignore
         # Validate package def
         s_storm.reqValidPkgdef(pkgdef)
 
+        pkgname = pkgdef.get('name')
+
+        # Check minimum synapse version
+        minversion = pkgdef.get('synapse_minversion')
+        if minversion is not None and minversion > s_version.version:
+            mesg = f'Storm package {pkgname} requires Synapse {minversion} but ' \
+                   f'Cortex is running {s_version.version}'
+            raise s_exc.BadVersion(mesg=mesg)
+
         # Validate storm contents from modules and commands
         mods = pkgdef.get('modules', ())
         cmds = pkgdef.get('commands', ())
         svciden = pkgdef.get('svciden')
-        pkgname = pkgdef.get('name')
 
         for mdef in mods:
             modtext = mdef.get('storm')
@@ -1980,6 +2042,9 @@ class Cortex(s_cell.Cell):  # type: ignore
         self.addStormCmd(s_storm.MoveTagCmd)
         self.addStormCmd(s_storm.ReIndexCmd)
         self.addStormCmd(s_storm.EdgesDelCmd)
+        self.addStormCmd(s_storm.ParallelCmd)
+        self.addStormCmd(s_storm.ViewExecCmd)
+        self.addStormCmd(s_storm.BackgroundCmd)
         self.addStormCmd(s_storm.SpliceListCmd)
         self.addStormCmd(s_storm.SpliceUndoCmd)
         self.addStormCmd(s_stormlib_macro.MacroExecCmd)
@@ -2573,6 +2638,13 @@ class Cortex(s_cell.Cell):  # type: ignore
         for _, node in node:
             layrinfo = await node.dict()
             await self._initLayr(layrinfo)
+
+    async def _checkNexsIndx(self):
+        layroffs = [await layr.getNodeEditOffset() for layr in self.layers.values()]
+        if layroffs:
+            maxindx = max(layroffs)
+            if maxindx > await self.getNexsIndx():
+                await self.setNexsIndx(maxindx)
 
     async def cloneLayer(self, iden, ldef=None):
         '''

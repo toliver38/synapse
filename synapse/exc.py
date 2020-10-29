@@ -141,6 +141,7 @@ class InconsistentStorage(SynErr):
 
 class IsFini(SynErr): pass
 class IsReadOnly(SynErr): pass
+class IsDeprLocked(SynErr): pass
 class IsRuntForm(SynErr): pass
 
 class LayerInUse(SynErr): pass
@@ -248,4 +249,7 @@ class StormContinue(StormCtrlFlow):
     pass
 
 class StormReturn(StormCtrlFlow):
+    pass
+
+class StormExit(StormCtrlFlow):
     pass
