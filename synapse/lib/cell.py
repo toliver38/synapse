@@ -1122,6 +1122,12 @@ class Cell(s_nexus.Pusher, s_telepath.Aware):
         self.httpds.append(serv)
         return list(serv._sockets.values())[0].getsockname()
 
+    async def addHttpPort(self, port, host='0.0.0.0'):
+        addr = socket.gethostbyname(host)
+        serv = self.wapp.listen(port, address=addr)
+        self.httpds.append(serv)
+        return list(serv._sockets.values())[0].getsockname()
+
     def initSslCtx(self, certpath, keypath):
 
         sslctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
