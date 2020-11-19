@@ -543,6 +543,11 @@ class Cell(s_nexus.Pusher, s_telepath.Aware):
             'description': 'A config-driven way to specify the HTTPS port.',
             'type': ['integer', 'null'],
         },
+        'http:port:plaintext': {
+            'description': 'A config-driven way to specify a HTTP port. This does not utilize TLS to secure'
+            'Cell communications.',
+            'type': ['integer', 'null'],
+        },
         'backup:dir': {
             'description': 'A directory outside the service directory where backups will be saved.',
             'type': 'string',
@@ -703,6 +708,11 @@ class Cell(s_nexus.Pusher, s_telepath.Aware):
         if port is not None:
             await self.addHttpsPort(port)
             logger.info(f'https listening: {port}')
+
+        port = self.conf.get('http:port:plaintext')
+        if port is not None:
+            await self.addHttpPort(port)
+            logger.warning(f'plaintext http listening: {port}')
 
     async def initServiceRuntime(self):
         pass
